@@ -1,0 +1,30 @@
+name: Compress and Upload Tiny11
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Install 7zip
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+      - name: Download ISO
+        run: |
+          wget -O Tiny11_Home.iso "https://downloads.sourceforge.net/project/tiny-11-releases/Tiny11-Home-25H2/Tiny11-25H2-English-Home-2026-03-15.iso?ts=gAAAAABp9Fozyn5WKyOmHW5s1A_xPwLIiWW4WVsVDWvCJEEEnXeAQCznTfKuGsJMPTmmmlioxIXTs9hj3cFqpE0oAGnu7SbBxA%3D%3D&use_mirror=yer&r="
+
+      - name: Max Compression (7z Ultra)
+        run: |
+          7z a -t7z -mx=9 -m0=lzma2 -md=64m -mfb=64 -ms=on Tiny11_Home_Compressed.7z Tiny11_Home.iso
+
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.1.0
+          name: Tiny11 Home 25H2 (Compressed)
+          body: "Tiny11 Home 25H2 - Ultra Compressed for Resume Support."
+          files: Tiny11_Home_Compressed.7z
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
