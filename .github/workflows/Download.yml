@@ -1,4 +1,4 @@
-name: Compress and Upload Tiny11
+name: Compress, Split and Upload Tiny11
 on:
   workflow_dispatch:
 
@@ -15,16 +15,16 @@ jobs:
         run: |
           wget -O Tiny11_Home.iso "https://downloads.sourceforge.net/project/tiny-11-releases/Tiny11-Home-25H2/Tiny11-25H2-English-Home-2026-03-15.iso?ts=gAAAAABp9Fozyn5WKyOmHW5s1A_xPwLIiWW4WVsVDWvCJEEEnXeAQCznTfKuGsJMPTmmmlioxIXTs9hj3cFqpE0oAGnu7SbBxA%3D%3D&use_mirror=yer&r="
 
-      - name: Max Compression (7z Ultra)
+      - name: Max Compression and Split
         run: |
-          7z a -t7z -mx=9 -m0=lzma2 -md=64m -mfb=64 -ms=on Tiny11_Home_Compressed.7z Tiny11_Home.iso
+          7z a -t7z -mx=9 -m0=lzma2 -md=64m -mfb=64 -ms=on -v2000m Tiny11_Home_Compressed.7z Tiny11_Home.iso
 
-      - name: Create Release and Upload
+      - name: Create Release and Upload Parts
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: Tiny11 Home 25H2 (Compressed)
-          body: "Tiny11 Home 25H2 - Ultra Compressed for Resume Support."
-          files: Tiny11_Home_Compressed.7z
+          tag_name: v1.2.0
+          name: Tiny11 Home 25H2 (Split Parts)
+          body: "Compressed and split into 2GB parts to bypass GitHub upload limits."
+          files: Tiny11_Home_Compressed.7z.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
