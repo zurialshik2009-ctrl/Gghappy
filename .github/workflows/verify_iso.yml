@@ -1,0 +1,38 @@
+name: Verify Tiny11 ISO Content
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect-iso:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wimtools 7zip wget
+
+      - name: Download ISO
+        run: |
+          wget -O target_image.iso "https://downloads.sourceforge.net/project/tiny-11-releases/Tiny11-Home-25H2/Tiny11-25H2-English-Home-2026-03-15.iso?ts=gAAAAABp9Fozyn5WKyOmHW5s1A_xPwLIiWW4WVsVDWvCJEEEnXeAQCznTfKuGsJMPTmmmlioxIXTs9hj3cFqpE0oAGnu7SbBxA%3D%3D&use_mirror=yer&r="
+
+      - name: Extract WIM/ESD
+        run: |
+          7z e target_image.iso sources/install.wim sources/install.esd -r || true
+
+      - name: Check Editions
+        run: |
+          if [ -f install.wim ]; then
+            wiminfo install.wim
+          elif [ -f install.esd ]; then
+            wiminfo install.esd
+          else
+            exit 1
+          fi
+
+      - name: Check Defender
+        run: |
+          if [ -f install.wim ]; then
+            wiminfo install.wim 1 | grep -iq "Defender" && echo "Defender: Found" || echo "Defender: Removed"
+          else
+            wiminfo install.esd 1 | grep -iq "Defender" && echo "Defender: Found" || echo "Defender: Removed"
+          fi
