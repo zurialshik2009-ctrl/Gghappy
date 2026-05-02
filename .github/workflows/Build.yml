@@ -1,4 +1,4 @@
-name: Test GDrive Upload (Stable)
+name: Test GDrive Upload (PyDrive2)
 on:
   workflow_dispatch:
 
@@ -14,13 +14,13 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Google Dependencies
-        run: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+      - name: Install Dependencies
+        run: pip install PyDrive2 google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
       - name: Create Test File
-        run: echo "Stability Test - $(date)" > test.txt
+        run: echo "Stability Test using PyDrive2 - $(date)" > test.txt
 
-      - name: Upload using Python Script
+      - name: Upload using PyDrive2
         env:
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
           FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
@@ -29,43 +29,45 @@ jobs:
           import os
           import json
           import sys
+          from pydrive2.auth import GoogleAuth
+          from pydrive2.drive import GoogleDrive
           from google.oauth2 import service_account
-          from googleapiclient.discovery import build
-          from googleapiclient.http import MediaFileUpload
 
           try:
               creds_json = json.loads(os.environ['GDRIVE_CREDENTIALS'])
               folder_id = os.environ['FOLDER_ID']
               
-              creds = service_account.Credentials.from_service_account_info(creds_json)
-              service = build('drive', 'v3', credentials=creds)
+              # Create temporary credentials file
+              with open('service_key.json', 'w') as f:
+                  json.dump(creds_json, f)
 
-              file_metadata = {
-                  'name': 'test.txt',
-                  'parents': [folder_id]
+              gauth = GoogleAuth()
+              scope = ['https://www.googleapis.com/auth/drive']
+              gauth.auth_method = 'service'
+              gauth.credentials = service_account.Credentials.from_service_account_file(
+                  'service_key.json', scopes=scope)
+              
+              drive = GoogleDrive(gauth)
+
+              print("Attempting to upload to Google Drive using PyDrive2...")
+              
+              file_params = {
+                  'title': 'test.txt',
+                  'parents': [{'id': folder_id}]
               }
               
-              media = MediaFileUpload('test.txt', mimetype='text/plain', resumable=True)
+              file_obj = drive.CreateFile(file_params)
+              file_obj.SetContentFile('test.txt')
               
-              print("Attempting to upload to Google Drive...")
+              # SupportsAllDrives ensures it respects folder permissions
+              file_obj.Upload(param={'supportsAllDrives': True})
               
-              # Execute the upload
-              file = service.files().create(
-                  body=file_metadata,
-                  media_body=media,
-                  fields='id',
-                  supportsAllDrives=True
-              ).execute()
-              
-              print(f"✅ Test Successful! File ID: {file.get('id')}")
+              print(f"✅ Test Successful! File ID: {file_obj['id']}")
 
           except Exception as e:
-              error_msg = str(e)
-              if "storageQuotaExceeded" in error_msg:
-                  print("❌ Storage Quota Error: Your Service Account cannot own files.")
-                  print("Tip: Go to Google Drive Folder > Settings > Ensure Service Account is 'Editor'.")
-                  print("If this fails, creating a 'Shared Drive' (Work/School account) is the standard fix.")
-              else:
-                  print(f"❌ Test Failed. Error: {error_msg}")
+              print(f"❌ Test Failed. Error: {str(e)}")
               sys.exit(1)
+          finally:
+              if os.path.exists('service_key.json'):
+                  os.remove('service_key.json')
           EOF
