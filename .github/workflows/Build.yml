@@ -12,7 +12,7 @@ jobs:
           echo "Upload Date: $(date)" >> test_file.txt
 
       - name: Upload Test File to Google Drive
-        uses: adityak74/google-drive-upload-gitaction@main
+        uses: Jidun-K/google-drive-upload-gitaction@v0.1.2
         with:
           credentials: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
           filename: test_file.txt
