@@ -1,53 +1,20 @@
-name: Tiny11 Detailed Inspector
+name: Test GDrive Upload
 on:
   workflow_dispatch:
 
 jobs:
-  inspect:
+  test-upload:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Tools
-        run: sudo apt-get update && sudo apt-get install -y wimtools 7zip wget
-
-      - name: Download ISO
+      - name: Create Test File
         run: |
-          wget -O target.iso "https://downloads.sourceforge.net/project/tiny-11-releases/Tiny11-Home-25H2/Tiny11-25H2-English-Home-2026-03-15.iso?ts=gAAAAABp9Fozyn5WKyOmHW5s1A_xPwLIiWW4WVsVDWvCJEEEnXeAQCznTfKuGsJMPTmmmlioxIXTs9hj3cFqpE0oAGnu7SbBxA%3D%3D&use_mirror=yer&r="
+          echo "This is a test file to verify Google Drive Upload" > test_file.txt
+          echo "Upload Date: $(date)" >> test_file.txt
 
-      - name: Extract System File
-        run: 7z e target.iso sources/install.wim sources/install.esd -r || true
-
-      - name: Generate Detailed Report
-        run: |
-          FILE_NAME=$(ls install.*)
-          echo "===========================================" > Detailed_Report.txt
-          echo "      TINY11 SYSTEM DETAILED REPORT        " >> Detailed_Report.txt
-          echo "===========================================" >> Detailed_Report.txt
-          
-          echo -e "\n[1] معلومات الإصدار والنوع (Edition & Build):" >> Detailed_Report.txt
-          wiminfo $FILE_NAME 1 >> Detailed_Report.txt
-          
-          echo -e "\n[2] فحص مكونات النظام الأساسية (Status):" >> Detailed_Report.txt
-          
-          check_feature() {
-            if wiminfo $FILE_NAME 1 | grep -iq "$1"; then
-              echo "$2: موجود (Found)" >> Detailed_Report.txt
-            else
-              echo "$2: محذوف (Removed)" >> Detailed_Report.txt
-            fi
-          }
-          
-          check_feature "Defender" "Windows Defender"
-          check_feature "Edge" "Microsoft Edge Browser"
-          check_feature "Store" "Microsoft Store"
-          check_feature "OneDrive" "OneDrive Client"
-          check_feature "Cortana" "Cortana Assistant"
-          check_feature "Camera" "Windows Camera App"
-          
-          echo -e "\n[3] قائمة الحزم المثبتة بالتفصيل (Metadata):" >> Detailed_Report.txt
-          wiminfo $FILE_NAME 1 --xml | grep -oP '(?<=DISPLAYNAME>)[^<]+' >> Detailed_Report.txt || echo "No Detailed Packages List Found" >> Detailed_Report.txt
-
-      - name: Upload Finished Report
-        uses: actions/upload-artifact@v4
+      - name: Upload Test File to Google Drive
+        uses: adityak74/google-drive-upload-gitaction@main
         with:
-          name: Tiny11-Report
-          path: Detailed_Report.txt
+          credentials: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
+          filename: test_file.txt
+          folderId: ${{ secrets.GDRIVE_FOLDER_ID }}
+          overwrite: "true"
