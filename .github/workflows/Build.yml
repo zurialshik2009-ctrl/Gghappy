@@ -44,20 +44,28 @@ jobs:
                   'name': 'test.txt',
                   'parents': [folder_id]
               }
-              media = MediaFileUpload('test.txt', mimetype='text/plain')
+              
+              media = MediaFileUpload('test.txt', mimetype='text/plain', resumable=True)
               
               print("Attempting to upload to Google Drive...")
               
+              # Execute the upload
               file = service.files().create(
-                  body=file_metadata, 
-                  media_body=media, 
+                  body=file_metadata,
+                  media_body=media,
                   fields='id',
-                  supportsAllDrives=True 
+                  supportsAllDrives=True
               ).execute()
               
               print(f"✅ Test Successful! File ID: {file.get('id')}")
 
           except Exception as e:
-              print(f"❌ Test Failed. Error: {str(e)}")
+              error_msg = str(e)
+              if "storageQuotaExceeded" in error_msg:
+                  print("❌ Storage Quota Error: Your Service Account cannot own files.")
+                  print("Tip: Go to Google Drive Folder > Settings > Ensure Service Account is 'Editor'.")
+                  print("If this fails, creating a 'Shared Drive' (Work/School account) is the standard fix.")
+              else:
+                  print(f"❌ Test Failed. Error: {error_msg}")
               sys.exit(1)
           EOF
