@@ -1,4 +1,4 @@
-name: Test GDrive Upload
+name: Test GDrive Upload (Stable)
 on:
   workflow_dispatch:
 
@@ -6,15 +6,48 @@ jobs:
   test-upload:
     runs-on: ubuntu-latest
     steps:
-      - name: Create Test File
-        run: |
-          echo "This is a test file to verify Google Drive Upload" > test_file.txt
-          echo "Upload Date: $(date)" >> test_file.txt
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Upload Test File to Google Drive
-        uses: Jidun-K/google-drive-upload-gitaction@v0.1.2
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          credentials: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
-          filename: test_file.txt
-          folderId: ${{ secrets.GDRIVE_FOLDER_ID }}
-          overwrite: "true"
+          python-version: '3.x'
+
+      - name: Install Google Dependencies
+        run: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+      - name: Create Test File
+        run: echo "Stability Test - $(date)" > test.txt
+
+      - name: Upload using Python Script
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
+          FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          python - <<EOF
+          import os
+          import json
+          import sys
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaFileUpload
+
+          try:
+              creds_json = json.loads(os.environ['GDRIVE_CREDENTIALS'])
+              folder_id = os.environ['FOLDER_ID']
+              
+              creds = service_account.Credentials.from_service_account_info(creds_json)
+              service = build('drive', 'v3', credentials=creds)
+
+              file_metadata = {'name': 'test.txt', 'parents': [folder_id]}
+              media = MediaFileUpload('test.txt', mimetype='text/plain')
+              
+              print("Attempting to upload to Google Drive...")
+              file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+              print(f"✅ Test Successful! File ID: {file.get('id')}")
+
+          except Exception as e:
+              print(f"❌ Test Failed. Error: {str(e)}")
+              sys.exit(1)
+          EOF
