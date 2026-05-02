@@ -40,11 +40,21 @@ jobs:
               creds = service_account.Credentials.from_service_account_info(creds_json)
               service = build('drive', 'v3', credentials=creds)
 
-              file_metadata = {'name': 'test.txt', 'parents': [folder_id]}
+              file_metadata = {
+                  'name': 'test.txt',
+                  'parents': [folder_id]
+              }
               media = MediaFileUpload('test.txt', mimetype='text/plain')
               
               print("Attempting to upload to Google Drive...")
-              file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+              
+              file = service.files().create(
+                  body=file_metadata, 
+                  media_body=media, 
+                  fields='id',
+                  supportsAllDrives=True 
+              ).execute()
+              
               print(f"✅ Test Successful! File ID: {file.get('id')}")
 
           except Exception as e:
