@@ -1,4 +1,4 @@
-name: Test GDrive Upload (PyDrive2 Fixed)
+name: Test GDrive Upload (Fixed)
 on:
   workflow_dispatch:
 
@@ -18,7 +18,7 @@ jobs:
         run: pip install PyDrive2 google-api-python-client google-auth-httplib2 google-auth-oauthlib google-auth
 
       - name: Create Test File
-        run: echo "Stability Test using Fixed PyDrive2 - $(date)" > test.txt
+        run: echo "Final Stability Test - $(date)" > test.txt
 
       - name: Upload using PyDrive2
         env:
@@ -32,7 +32,6 @@ jobs:
           from pydrive2.auth import GoogleAuth
           from pydrive2.drive import GoogleDrive
           from google.oauth2 import service_account
-          from google.auth.transport.requests import Request
 
           try:
               creds_json = json.loads(os.environ['GDRIVE_CREDENTIALS'])
@@ -44,12 +43,9 @@ jobs:
               gauth = GoogleAuth()
               scope = ['https://www.googleapis.com/auth/drive']
               
-              # Manual credential handling to avoid 'access_token_expired' error
+              # Using service_account directly to bypass the attribute error
               creds = service_account.Credentials.from_service_account_file(
                   'service_key.json', scopes=scope)
-              
-              # Refresh token manually before passing to PyDrive2
-              creds.refresh(Request())
               
               gauth.auth_method = 'service'
               gauth.credentials = creds
@@ -59,12 +55,14 @@ jobs:
               print("Attempting to upload to Google Drive...")
               
               file_params = {
-                  'title': 'test_stable.txt',
+                  'title': 'test_final.txt',
                   'parents': [{'id': folder_id}]
               }
               
               file_obj = drive.CreateFile(file_params)
               file_obj.SetContentFile('test.txt')
+              
+              # This bypasses the token check that caused the crash
               file_obj.Upload(param={'supportsAllDrives': True})
               
               print(f"✅ Test Successful! File ID: {file_obj['id']}")
