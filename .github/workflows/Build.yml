@@ -1,4 +1,4 @@
-name: Test GDrive Upload (PyDrive2)
+name: Test GDrive Upload (PyDrive2 Fixed)
 on:
   workflow_dispatch:
 
@@ -15,10 +15,10 @@ jobs:
           python-version: '3.x'
 
       - name: Install Dependencies
-        run: pip install PyDrive2 google-api-python-client google-auth-httplib2 google-auth-oauthlib
+        run: pip install PyDrive2 google-api-python-client google-auth-httplib2 google-auth-oauthlib google-auth
 
       - name: Create Test File
-        run: echo "Stability Test using PyDrive2 - $(date)" > test.txt
+        run: echo "Stability Test using Fixed PyDrive2 - $(date)" > test.txt
 
       - name: Upload using PyDrive2
         env:
@@ -32,34 +32,39 @@ jobs:
           from pydrive2.auth import GoogleAuth
           from pydrive2.drive import GoogleDrive
           from google.oauth2 import service_account
+          from google.auth.transport.requests import Request
 
           try:
               creds_json = json.loads(os.environ['GDRIVE_CREDENTIALS'])
               folder_id = os.environ['FOLDER_ID']
               
-              # Create temporary credentials file
               with open('service_key.json', 'w') as f:
                   json.dump(creds_json, f)
 
               gauth = GoogleAuth()
               scope = ['https://www.googleapis.com/auth/drive']
-              gauth.auth_method = 'service'
-              gauth.credentials = service_account.Credentials.from_service_account_file(
+              
+              # Manual credential handling to avoid 'access_token_expired' error
+              creds = service_account.Credentials.from_service_account_file(
                   'service_key.json', scopes=scope)
+              
+              # Refresh token manually before passing to PyDrive2
+              creds.refresh(Request())
+              
+              gauth.auth_method = 'service'
+              gauth.credentials = creds
               
               drive = GoogleDrive(gauth)
 
-              print("Attempting to upload to Google Drive using PyDrive2...")
+              print("Attempting to upload to Google Drive...")
               
               file_params = {
-                  'title': 'test.txt',
+                  'title': 'test_stable.txt',
                   'parents': [{'id': folder_id}]
               }
               
               file_obj = drive.CreateFile(file_params)
               file_obj.SetContentFile('test.txt')
-              
-              # SupportsAllDrives ensures it respects folder permissions
               file_obj.Upload(param={'supportsAllDrives': True})
               
               print(f"✅ Test Successful! File ID: {file_obj['id']}")
